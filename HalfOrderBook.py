@@ -1,12 +1,11 @@
 import heapq
-from sortedcontainers import SortedDict
 
 class HalfOrderBook(object):
 	def __init__ (self,minHeap=True):
 		self.ids = {}
 		self.prices = []
 		self.sizes = {}
-		self.minHeap = minHeap
+		self.minHeap = 2*minHeap - 1 #store as +/-1
 
 	def update (self, order):
 		assert "id" in order and "price" in order and "size" in order
@@ -24,10 +23,7 @@ class HalfOrderBook(object):
 		
 		sizeDelta = order["size"] - oldSize
 		if price not in self.sizes :
-			heapq.heappush (
-				self.prices,
-				price if self.minHeap else -price
-			)
+			heapq.heappush (self.prices,self.minHeap*price)
 			self.sizes[price] = sizeDelta
 		else :
 			self.sizes[price] += sizeDelta
@@ -37,7 +33,7 @@ class HalfOrderBook(object):
 			self.update (order)
 
 	def best (self):
-		price = (1 if self.minHeap else -1) * self.prices[0]
+		price = self.minHeap * self.prices[0]
 		size = self.sizes[price]
 		return dict(price=price, size=size)
 
