@@ -107,3 +107,9 @@ config*
 
 # Specification
 *.pdf
+
+# Python language experiments
+pythontests.py
+
+# Ouput files
+output*

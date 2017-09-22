@@ -9,5 +9,8 @@ class Unit(Enum):
 	GBP="GBP"
 
 class OrderType(Enum):
-	BID="Bid"
-	OFFER="Offer"
+	BID="bid"
+	ASK="ask"
+
+class Fees(Enum):
+	GDAX=0.0025

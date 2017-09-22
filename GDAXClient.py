@@ -1,47 +1,61 @@
-import Order
-from constants import Unit, OrderType
-import gdax
+import time, sys, threading, gdax
+from OrderBook import OrderBook
+from HalfOrderBook import HalfOrderBook
+from constants import OrderType, Unit, Fees
 
-class OrderBook(object):
-	"""Represents an order book"""
-	def __init__(self, sizeccy=Unit.BTC, priceccy=Unit.USD, bids=[], offers=[]):
-		self.sizeccy=sizeccy
-		self.priceccy=priceccy
-		self.publicclient=gdax.PublicClient()
+class GDAXClient(gdax.WebsocketClient):
+	"""Subscribes to and processes the GDAX feed"""
+	def __init__(self, url="wss://ws-feed.gdax.com", products=None, message_type="subscribe",auth=False, \
+		api_key="", api_secret="", api_passphrase="", client=gdax, orderbooks={}):
 
-		# Get order book snapshot. <level> paramter described at https://docs.gdax.com/#get-product-order-book
-		# Multiple instances of an order with the same price and size are coalesced
-		raworderbook = self.publicclient.get_product_order_book(self.sizeccy.value + '-' + self.priceccy.value, level=2)
-		self.bids = map(lambda bid: Order(
-			size=Quantity(float(bid[1]) * float(bid[2]), self.sizeccy), 
-			price=Quantity(float(bid[0]), self.priceccy), kind=OrderType.BID),
-		raworderbook["bids"])
-		self.offers = map(lambda offer: Order(
-			size=Quantity(float(offer[1]) * float(offer[2]), self.sizeccy), 
-			price=Quantity(float(offer[0]), self.priceccy), kind=OrderType.OFFER),
-		raworderbook["asks"])
+		self.url = url
+		self.products = products
+		self.type = message_type
+		self.stop = False
+		self.ws = None
+		self.thread = None
+		self.auth = auth
+		self.api_key = api_key
+		self.api_secret = api_secret
+		self.api_passphrase = api_passphrase
+		self.client = gdax.PublicClient()
+		self.orderbooks = {}
+		self.message_count = 0
 
-	# See https://docs.gdax.com/#real-time-order-book
-	def update(self):
-		return "Not Implemented"
+		# Get an order book snapshot for each product pair. The <level> paramter is
+		# described at https://docs.gdax.com/#get-product-order-book. Level 3
+		# returns the full, non aggregated order book.
+		for product in products:
+			raworderbook = self.client.get_product_order_book(product, level=3) 
+			self.orderbooks[product] = OrderBook(priceCcy=Unit(product.split("-")[1]), 
+				sizeCcy=Unit(product.split("-")[0]), fee=Fees.GDAX,
+				askOrders=map(lambda order: dict(id=order[2], price=float(order[0]), size=float(order[1])),
+					raworderbook["asks"]),
+				bidOrders=map(lambda order: dict(id=order[2], price=float(order[0]), size=float(order[1])),
+					raworderbook["bids"]))
+
+	def on_open(self):
+		print("-- Hello! --")
+
+	## TODO
+	def on_message(self, msg):
+		self.message_count = self.message_count + 1
+	 
+	def on_close(self):
+		print("-- Goodbye! --")
 
 	def __str__(self):
+		return "Messages processed: " + str(self.message_count) + \
+		"\n\nURL: " + self.url + "\n\nOrder Books:\n\n" + \
+			"\n\n".join ([
+				str(self.orderbooks[product]) for 
+				product in self.products
+				])
 
-		# Helper function to print a list
-		def format_list(l):
-			formattedlist = ""
-			for element in l:
-				formattedlist += (element.__str__() + "\n")
-			return formattedlist
+def test():
 
-		return "Size currency: %s\nPrice currency: %s\n\nBids:\n%s\n\nOffers:\n%s" % (
-			self.sizeccy.value, self.priceccy.value, format_list(self.bids), format_list(self.offers))
+	# Print a snapshot of gClient
+	gClient = GDAXClient(products=["BTC-USD","ETH-USD"])
+	print(gClient)
 
-def sanity_check():
-	# testorder = Order(size=Quantity(100, Unit.BTC), price=Quantity(200, Unit.EUR), kind=OrderType.BID)
-	# print(testorder)
-	# print (testorder.get_dual())
-
-	print(OrderBook())
-
-sanity_check()
+#test()
