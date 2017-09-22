@@ -1,6 +1,6 @@
-import HalfOrderBook
+from HalfOrderBook import HalfOrderBook
 
-class OrderBook(object):
+class OrderBook():
 	def __init__ (self, priceCcy="USD", sizeCcy="BTC", fee=0.0025):
 		self.orders   = dict(
 			bid=HalfOrderBook(asc=False),

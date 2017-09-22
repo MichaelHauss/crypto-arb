@@ -1,6 +1,6 @@
 from sortedcontainers import SortedDict
 
-class HalfOrderBook(object):
+class HalfOrderBook():
 	def __init__ (self, asc=True, orders=[]):
 		self.ids    = {}
 		self.orders = SortedDict()
